@@ -234,7 +234,7 @@ def test_ingest_session_creates_records(mock_fastf1, db):
 
     assert result["drivers_count"] == 2
     assert result["laps_count"] == 4
-    assert result["action"] == "creada"
+    assert result["action"] == "created"
 
     # Verificar que se crearon realmente en DB
     assert db.query(F1Session).count() == 1
@@ -267,8 +267,8 @@ def test_ingest_session_is_idempotent(mock_fastf1, db):
     result1 = ingest_session(db, year=2024, grand_prix="Miami", session_type="Q")
     result2 = ingest_session(db, year=2024, grand_prix="Miami", session_type="Q")
 
-    assert result1["action"] == "creada"
-    assert result2["action"] == "actualizada"
+    assert result1["action"] == "created"
+    assert result2["action"] == "reimported"
 
     # Después de 2 corridas debe haber exactamente 1 sesión y 4 vueltas
     assert db.query(F1Session).count() == 1

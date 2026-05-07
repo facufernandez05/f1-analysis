@@ -7,9 +7,11 @@ services:
       - "8000:8000"
     volumes:
       - .:/app
+      - ./data:/app/data
     environment:
       - DEBUG=true
       - DATABASE_URL=postgresql://f1user:f1pass@db:5432/f1telemetry
+      - FASTF1_CACHE_PATH=/app/data/fastf1_cache
     depends_on:
       db:
         condition: service_healthy

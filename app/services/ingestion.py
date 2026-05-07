@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import logging
+import os
 
 import fastf1
 import pandas as pd
@@ -185,6 +186,7 @@ def ingest_session(
     # 1. Activar caché y cargar sesión
     #    telemetry=False → no descarga datos por muestra (más liviano)
     #    laps=True      → sí descarga datos de vueltas
+    os.makedirs(cache_path, exist_ok=True)
     fastf1.Cache.enable_cache(cache_path)
     ff1_session = fastf1.get_session(year, grand_prix, session_type)
     ff1_session.load(telemetry=False, laps=True, weather=False, messages=False)
@@ -201,7 +203,7 @@ def ingest_session(
     db_session, is_new = upsert_f1_session(
         db, year, grand_prix, session_type, session_date
     )
-    action = "creada" if is_new else "actualizada"
+    action = "created" if is_new else "reimported"
     logger.info("Sesión %s (id=%d)", action, db_session.id)
 
     # 4. Procesar pilotos únicos que aparecen en las vueltas

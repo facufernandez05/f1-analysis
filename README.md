@@ -1,177 +1,182 @@
 # F1 Telemetry API
 
-API de telemetría de Fórmula 1 construida con Python y FastAPI.  
-Proyecto de portafolio para aprender análisis de datos, Docker y CI/CD.
+[![CI](https://github.com/facufernandez05/f1-analysis/actions/workflows/ci.yml/badge.svg)](https://github.com/facufernandez05/f1-analysis/actions/workflows/ci.yml)
 
----
+Portfolio-ready backend project built with FastAPI, SQLAlchemy, PostgreSQL,
+Alembic, and FastF1.
 
-## Estructura del proyecto
+It ingests real Formula 1 session data and exposes analysis endpoints such as
+fastest lap, average lap time, and per-driver rankings.
 
-```
-f1-analysis/
-├── app/                    # Código fuente de la API
-│   ├── __init__.py
-│   ├── main.py             # Punto de entrada de FastAPI (rutas, middlewares)
-│   └── config.py           # Variables de configuración (leídas desde .env)
-├── tests/                  # Tests automáticos
-│   └── test_health.py
-├── scripts/                # Scripts auxiliares de análisis y exploración
-│   └── telemetry_check.py
-├── data/                   # Caché local de fastf1 (ignorado en git)
-├── notebooks/              # Notebooks de exploración (próximamente)
-├── .github/workflows/      # CI/CD con GitHub Actions
-│   └── ci.yml
-├── Dockerfile              # Imagen Docker de la API
-├── docker-compose.dev.yml  # Stack completo para desarrollo (API + PostgreSQL)
-├── requirements.txt        # Dependencias Python
-├── pyproject.toml          # Configuración de herramientas (pytest, ruff, black)
-└── .env.example            # Plantilla de variables de entorno (crear .env local)
-```
+## What this project does
 
----
+- Ingests real session data from FastF1 (`POST /api/v1/ingest/`)
+- Stores normalized data in PostgreSQL (`sessions`, `drivers`, `laps`)
+- Exposes clean REST endpoints under `/api/v1`
+- Returns computed analytics (`GET /api/v1/sessions/{id}/stats`)
+- Includes automated quality checks in CI (ruff, black, isort, pytest)
 
-## Conceptos clave que vas a aprender en este proyecto
+## Tech stack
 
-### ¿Qué es FastAPI?
-Framework web de Python. Permite crear APIs HTTP de forma rápida.  
-Cuando hacés `curl http://localhost:8000/health`, estás llamando a un **endpoint** definido en `app/main.py`.
+- Python 3.11+
+- FastAPI
+- SQLAlchemy + Alembic
+- PostgreSQL 16
+- FastF1
+- Docker + Docker Compose
+- pytest + ruff + black + isort
 
-### ¿Qué es Docker?
-Herramienta que empaqueta tu aplicación con todo lo que necesita para correr  
-(Python, librerías, configuración) en un contenedor aislado del resto del sistema.  
-Así cualquier persona puede correr el proyecto con un solo comando, sin importar su OS.
+## Quick Start (Docker-only)
 
-### ¿Qué es docker-compose?
-Permite levantar **múltiples contenedores juntos**. En este proyecto:
-- Un contenedor con la API (FastAPI)
-- Un contenedor con la base de datos (PostgreSQL)
-- Ambos se comunican entre sí por una red interna de Docker
-
-### ¿Qué es CI/CD?
-- **CI (Continuous Integration)**: cada vez que hacés un commit o PR, GitHub  
-  corre automáticamente los tests y el linter. Si algo está roto, te avisa antes  
-  de que llegue a producción.
-- **CD (Continuous Deployment)**: cuando el CI pasa, el deploy al servidor  
-  se hace automáticamente (lo configuramos en iteraciones siguientes).
-
----
-
-## Cómo correr el proyecto
-
-### Opción A: Con Docker (recomendada, replica producción)
-
-Necesitás tener instalado: **Docker** y **docker-compose** (vienen juntos con Docker Desktop).
+### 1) Clone and configure env vars
 
 ```bash
-# 1. Cloná o posicionarte en la carpeta del proyecto
+git clone https://github.com/facufernandez05/f1-analysis.git
 cd f1-analysis
-
-# 2. Levantá el stack completo (API + base de datos)
-docker compose -f docker-compose.dev.yml up --build
-
-# La primera vez tarda más porque descarga las imágenes base.
-# Vas a ver logs de PostgreSQL y de uvicorn (servidor de FastAPI).
-
-# 3. Verificá que la API responde (en otra terminal)
-curl http://localhost:8000/health
-# Respuesta esperada: {"status":"ok","app":"F1 Telemetry API"}
-
-# 4. Para detener todo
-docker compose -f docker-compose.dev.yml down
+cp .env.example .env
 ```
 
-### Opción B: Sin Docker (más rápida para desarrollo)
+### 2) Start everything
 
 ```bash
-# 1. Creá un entorno virtual de Python (aísla las dependencias del proyecto)
-python3 -m venv .venv
+make up
+```
 
-# 2. Activá el entorno virtual
-source .venv/bin/activate       # Linux/Mac
-# .venv\Scripts\activate        # Windows
+If Docker ever reports `permission denied` for `entrypoint.sh`:
 
-# 3. Instalá las dependencias
-pip install -r requirements.txt
+```bash
+chmod +x entrypoint.sh
+```
 
-# 4. Corré la API (sin base de datos por ahora)
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+What happens here:
 
-# --reload hace que la API se reinicie automáticamente cuando modificás código
+- PostgreSQL starts on `localhost:5433`
+- API starts on `localhost:8000`
+- Migrations run automatically (`alembic upgrade head`) before the API boots
 
-# 5. Verificá que responde
+### 3) Verify API is alive
+
+```bash
 curl http://localhost:8000/health
 ```
 
----
+Expected response:
 
-## Cómo correr los tests
+```json
+{"status":"ok","app":"F1 Telemetry API"}
+```
+
+### 4) Ingest a real F1 session
 
 ```bash
-# Con el entorno virtual activado:
-pytest tests/ -v
-
-# -v = verbose, muestra cada test con su resultado
-# El output debería mostrar: tests/test_health.py::test_health PASSED
+make ingest YEAR=2024 GP=Bahrain SESSION=R
 ```
 
-Los tests verifican que la API se comporta como se espera **sin necesitar levantar**  
-la base de datos ni el servidor real. Esto los hace rápidos y reproducibles.
-
----
-
-## Cómo correr el linter
-
-El linter detecta errores de estilo y bugs simples antes de que lleguen a producción.
+### 5) Inspect the data
 
 ```bash
-# Con el entorno virtual activado:
-ruff check .        # Detecta problemas
-black --check .     # Verifica formato
+make sessions
+make drivers
+make stats SESSION_ID=1
 ```
 
-El CI en GitHub Actions corre esto automáticamente en cada PR.
+### 6) Open interactive docs
 
----
+- Swagger UI: `http://localhost:8000/docs`
+- ReDoc: `http://localhost:8000/redoc`
 
-## Variables de entorno
+### 7) Stop services
 
-Creá un archivo `.env` en la raíz (nunca se sube a git):
-
-```
-APP_NAME=F1 Telemetry API
-DEBUG=true
-DATABASE_URL=postgresql://f1user:f1pass@localhost:5432/f1telemetry
+```bash
+make down
 ```
 
-Cuando usás docker-compose, estas variables ya están configuradas en el archivo.
+## Useful commands
 
----
+```bash
+make up                     # Build + run API and DB in background
+make down                   # Stop containers
+make logs                   # Follow API logs
+make ps                     # Show container status
+make shell                  # Shell inside api container
 
-## Roadmap
+make test                   # Run pytest inside api container
+make lint                   # Run ruff + black --check + isort --check-only
+make format                 # Auto-format (black + isort)
 
-| # | Iteración | Estado |
-|---|-----------|--------|
-| 1 | Skeleton + Docker + CI | Completada |
-| 2 | Modelos de datos (SQLAlchemy + Alembic) + endpoints CRUD | Pendiente |
-| 3 | Script de ingesta con fastf1 | Pendiente |
-| 4 | Análisis: comparación de vueltas por sector | Pendiente |
-| 5 | CI completo + Docker builds de producción | Pendiente |
-| 6 | CD: despliegue automático a staging | Pendiente |
-| 7 | Extras: análisis de degradación de neumáticos, etc. | Pendiente |
+make ingest YEAR=2024 GP=Monaco SESSION=Q
+make stats SESSION_ID=1
+make laps SESSION_ID=1
+```
 
----
+## API endpoints
 
-## Stack
+### Health
 
-| Herramienta | Para qué |
-|-------------|----------|
-| Python 3.11+ | Lenguaje base |
-| FastAPI | Framework HTTP para la API |
-| SQLAlchemy | ORM para interactuar con la base de datos |
-| Alembic | Migraciones de esquema de base de datos |
-| PostgreSQL | Base de datos relacional |
-| fastf1 | Librería para descargar telemetría de F1 |
-| pytest | Tests automáticos |
-| ruff + black | Linter y formateador de código |
-| Docker | Contenerización |
-| GitHub Actions | CI/CD automatizado |
+- `GET /health`
+
+### Sessions
+
+- `GET /api/v1/sessions/`
+- `GET /api/v1/sessions/{session_id}`
+- `GET /api/v1/sessions/{session_id}/stats`
+
+### Drivers
+
+- `GET /api/v1/drivers/`
+- `GET /api/v1/drivers/{driver_code}`
+
+### Laps
+
+- `GET /api/v1/sessions/{session_id}/laps`
+- `GET /api/v1/sessions/{session_id}/laps?driver_code=VER`
+
+### Ingestion
+
+- `POST /api/v1/ingest/`
+
+Request body example:
+
+```json
+{
+  "year": 2024,
+  "grand_prix": "Bahrain",
+  "session_type": "R"
+}
+```
+
+## Project structure
+
+```text
+f1-analysis/
+├── app/
+│   ├── api/v1/          # FastAPI routers (sessions, drivers, laps, ingest)
+│   ├── db/              # SQLAlchemy base, models, session dependency
+│   ├── schemas/         # Pydantic request/response models
+│   ├── services/        # Business logic (ingestion, analysis)
+│   ├── config.py
+│   └── main.py
+├── alembic/             # Database migrations
+├── tests/               # Unit and API tests
+├── data/                # FastF1 cache (gitignored)
+├── docker-compose.dev.yml
+├── Dockerfile
+├── entrypoint.sh
+├── Makefile
+├── requirements.txt
+└── .github/workflows/ci.yml
+```
+
+## Current status
+
+- Iteration 1: project skeleton + Docker + CI (done)
+- Iteration 2: data model + base endpoints + tests (done)
+- Iteration 3: FastF1 ingestion service + CLI + tests (done)
+- Iteration 4: ingestion API + session stats analytics + tests (done)
+- Iteration 5: docker-first DX, auto migrations, docs polish (done)
+
+## Notes
+
+- FastF1 cache path is configured via `FASTF1_CACHE_PATH`
+- Cache is persisted in `./data` (ignored in git)
+- First ingestion can take longer due to initial data downloads

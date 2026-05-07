@@ -5,6 +5,7 @@ venv/
 .venv/
 env/
 .env*
+!.env.example
 
 # =========================
 # Caché de FastF1 y Datos
