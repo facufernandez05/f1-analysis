@@ -6,7 +6,10 @@ Portfolio-ready backend project built with FastAPI, SQLAlchemy, PostgreSQL,
 Alembic, and FastF1.
 
 It ingests real Formula 1 session data and exposes analysis endpoints such as
-fastest lap, average lap time, and per-driver rankings.
+fastest lap, average lap time, per-driver rankings, and lap-by-lap pace trends.
+
+It also includes a Python SDK so other developers can consume your API as a
+library in their own projects.
 
 ## What this project does
 
@@ -14,6 +17,8 @@ fastest lap, average lap time, and per-driver rankings.
 - Stores normalized data in PostgreSQL (`sessions`, `drivers`, `laps`)
 - Exposes clean REST endpoints under `/api/v1`
 - Returns computed analytics (`GET /api/v1/sessions/{id}/stats`)
+- Returns pace time-series ready for charts (`GET /api/v1/sessions/{id}/pace`)
+- Ships a reusable Python client library (`sdk/f1telemetry_sdk`)
 - Includes automated quality checks in CI (ruff, black, isort, pytest)
 
 ## Tech stack
@@ -106,7 +111,10 @@ make format                 # Auto-format (black + isort)
 
 make ingest YEAR=2024 GP=Monaco SESSION=Q
 make stats SESSION_ID=1
+make pace SESSION_ID=1
 make laps SESSION_ID=1
+make sdk-install            # install local SDK in editable mode
+make sdk-build              # build wheel/sdist for distribution
 ```
 
 ## API endpoints
@@ -120,6 +128,7 @@ make laps SESSION_ID=1
 - `GET /api/v1/sessions/`
 - `GET /api/v1/sessions/{session_id}`
 - `GET /api/v1/sessions/{session_id}/stats`
+- `GET /api/v1/sessions/{session_id}/pace?window_size=3&normalize_to_best=true`
 
 ### Drivers
 
@@ -158,6 +167,8 @@ f1-analysis/
 │   └── main.py
 ├── alembic/             # Database migrations
 ├── tests/               # Unit and API tests
+├── sdk/
+│   └── f1telemetry_sdk/ # Installable Python SDK for external developers
 ├── data/                # FastF1 cache (gitignored)
 ├── docker-compose.dev.yml
 ├── Dockerfile
@@ -174,6 +185,32 @@ f1-analysis/
 - Iteration 3: FastF1 ingestion service + CLI + tests (done)
 - Iteration 4: ingestion API + session stats analytics + tests (done)
 - Iteration 5: docker-first DX, auto migrations, docs polish (done)
+- Iteration 6: pace analytics endpoint + installable Python SDK (done)
+
+## Python SDK
+
+The repo ships a developer-facing SDK at `sdk/f1telemetry_sdk`.
+
+Install locally:
+
+```bash
+make sdk-install
+```
+
+Example:
+
+```python
+from f1telemetry_sdk import F1TelemetryClient, IngestRequest
+
+client = F1TelemetryClient(base_url="http://localhost:8000")
+client.health()
+
+client.ingest(IngestRequest(year=2024, grand_prix="Bahrain", session_type="R"))
+session_id = client.list_sessions()[0]["id"]
+
+stats = client.session_stats(session_id)
+pace = client.session_pace(session_id, window_size=5)
+```
 
 ## Notes
 

@@ -1,0 +1,19 @@
+[build-system]
+requires = ["hatchling>=1.24.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "f1telemetry-sdk"
+version = "0.1.0"
+description = "Python SDK for the F1 Telemetry API"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Facu Fernandez" }]
+dependencies = ["httpx>=0.26.0"]
+
+[project.urls]
+Homepage = "https://github.com/facufernandez05/f1-analysis"
+Issues = "https://github.com/facufernandez05/f1-analysis/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/f1telemetry_sdk"]
