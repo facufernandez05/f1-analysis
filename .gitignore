@@ -1,0 +1,40 @@
+# =========================
+# Entornos Virtuales
+# =========================
+venv/
+.venv/
+env/
+.env*
+
+# =========================
+# Caché de FastF1 y Datos
+# =========================
+# Ignoramos la carpeta data para no subir gigabytes de telemetría a GitHub
+data/
+*.csv
+*.json
+*.parquets
+
+# =========================
+# Python y Caché del Sistema
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# =========================
+# Entornos de Desarrollo / IDEs
+# =========================
+.vscode/
+.idea/
+*.swp
+
+# =========================
+# Archivos de SO (Linux/Mac/Windows)
+# =========================
+.DS_Store
+Thumbs.db
