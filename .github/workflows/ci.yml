@@ -16,9 +16,9 @@ jobs:
           python-version: "3.11"
       - run: pip install --upgrade uv
       - run: uv pip install --system ruff black isort
-      - run: ruff check backend/
-      - run: black --check backend/
-      - run: isort --check-only backend/
+      - run: ruff check .
+      - run: black --check .
+      - run: isort --check-only .
 
   test:
     runs-on: ubuntu-latest
@@ -28,5 +28,5 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install --upgrade uv
-      - run: uv pip install --system -r backend/requirements.txt
-      - run: pytest backend/tests/ -v
+      - run: uv pip install --system -r requirements.txt
+      - run: pytest tests/ -v
